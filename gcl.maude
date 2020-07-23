@@ -1,0 +1,152 @@
+set show advisories off .
+
+load prelude.maude
+
+fmod VAR is
+    including QID .
+    sort Var .
+    subsort Qid < Var .
+endfm
+
+view Var from TRIV to VAR is
+    sort Elt to Var .
+endv
+
+fmod EXPR is
+    pr VAR .
+    pr INT .
+    pr BOOL .
+
+    sort Expr .
+    subsorts Bool Int Var < Expr .
+
+    op _+_ : Expr Expr -> Expr [ditto] .
+    op _*_ : Expr Expr -> Expr [ditto] .
+    op not_ : Expr -> Expr [ditto] .
+    op _and_ : Expr Expr -> Expr [ditto] .
+    op _=:=_ : Expr Expr -> Expr [prec 25] .
+    op _<_ : Expr Expr -> Expr [ditto] .
+endfm
+
+view Expr from TRIV to EXPR is
+    sort Elt to Expr .
+endv
+
+fmod STATE is
+    pr VAR .
+    pr EXPR .
+    pr MAP{Var, Expr} .
+
+    sort Substitution .
+    subsort Map{Var, Expr} < Substitution .
+endfm
+
+fmod EVAL is
+    pr EXPR .
+    pr STATE .
+
+    var M : Substitution .
+    var N : Int .
+    var B : Bool .
+    var V : Var .
+    vars E1 E2 : Expr .
+
+    op eval : Substitution Expr -> Expr .
+    eq eval(M, N) = N .
+    eq eval(M, B) = B .
+    eq eval(M, V) = M[V] .
+    eq eval(M, E1 + E2) = eval(M, E1) + eval(M, E2) .
+    eq eval(M, E1 * E2) = eval(M, E1) * eval(M, E2) .
+    eq eval(M, not(E1)) = not(eval(M, E1)) .
+    eq eval(M, E1 and E2) = eval(M, E1) and eval(M, E2) .
+    eq eval(M, E1 =:= E2) = eval(M, E1) =:= eval(M, E2) .
+    eq eval(M, E1 < E2) = eval(M, E1) =:= eval(M, E2) .
+endfm
+
+fmod GCL-STATEMENTS is
+    pr EXPR .
+
+    sorts Program GuardStm Statement .
+
+    --- op {_|_} : Substitution GuardStm -> Program .
+    op _|>_ : Expr Statement -> GuardStm .
+    op _<|_|>_ : Statement Expr Statement -> GuardStm .
+    op _;_ : GuardStm GuardStm -> GuardStm [assoc prec 100] .
+    op skip : -> GuardStm .
+    op _:=_ : Var Expr -> Statement .
+    op spawn : GuardStm -> Statement .
+endfm
+
+fmod PROCESS is
+    pr NAT .
+    pr GCL-STATEMENTS .
+
+    sorts Process ThreadId .
+    subsort Nat < ThreadId .
+
+    op iota<_>(_) : ThreadId GuardStm -> Process .
+endfm
+
+view Process from TRIV to PROCESS is
+    sort Elt to Process .
+endv
+
+fmod RUNTIME-SYNTAX is
+    pr PROCESS .
+    pr STATE .
+    pr SET{Process} .
+
+    sorts Processes RuntimeState .
+    subsort Set{Process} < Processes .
+    op {_|_} : Substitution Processes -> RuntimeState .
+endfm
+
+mod GCL-SEMANTICS is
+    pr COUNTER .
+    pr EVAL .
+    pr RUNTIME-SYNTAX .
+    pr GCL-STATEMENTS .
+
+    vars Sigma Sigma' : Substitution .
+    vars g g' : GuardStm .
+    vars s1 s2 : Statement .
+    vars e e' : Expr .
+    var I : ThreadId .
+    var x : Var .
+    vars P P' : Processes .
+
+    rl [Skip] :
+        { Sigma | iota< I > (skip ; g) }
+      =>
+        { Sigma | iota< I > (g) } .
+
+    crl [Assignment] :
+        { Sigma | iota< I > (e |> x := e' ; g) }
+      =>
+        { Sigma' | iota< I > (g) }
+      if eval(Sigma, e) == true /\
+          Sigma' := Sigma, x |-> eval(Sigma, e') .
+
+    crl [Spawn] :
+        { Sigma | iota< I > (e |> spawn(g') ; g) }
+      =>
+        { Sigma | iota< I > (g), iota< counter > (g') }
+      if eval(Sigma, e) == true .
+
+--- Change these.
+    crl [Choice1] :
+        { Sigma | iota< I > (s1 <| e |> s2 ; g) }
+      =>
+        { Sigma' | P }
+      if P := iota< I > (e |> s1 ; g)
+          /\ { Sigma | P } => { Sigma' | P' }
+          /\ P =/= P' .
+
+    crl [Choice2] :
+        { Sigma | iota< I > (s1 <| e |> s2 ; g) }
+      =>
+        { Sigma' | P' }
+      if P := iota< I > ((not e) |> s2 ; g)
+          /\ { Sigma | P } => { Sigma' | P' }
+          /\ P =/= P' .
+endm
