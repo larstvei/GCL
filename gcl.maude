@@ -132,7 +132,7 @@ mod GCL-SEMANTICS is
       =>
         { done | Sigma' | iota< I > (g) }
       if eval(Sigma, e) == true /\
-          Sigma' := Sigma, x |-> eval(Sigma, e') .
+          Sigma' := insert(x, eval(Sigma, e'), Sigma) .
 
     crl [Spawn] :
         { step | Sigma | iota< I > (e |> spawn(g') ; g) }
