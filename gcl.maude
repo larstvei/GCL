@@ -1,4 +1,3 @@
---- set print with parentheses on .
 set show advisories off .
 
 load prelude.maude
@@ -22,6 +21,7 @@ fmod EXPR is
     subsorts Bool Int Var < Expr .
 
     op _+_ : Expr Expr -> Expr [ditto] .
+    op _-_ : Expr Expr -> Expr [ditto] .
     op _*_ : Expr Expr -> Expr [ditto] .
     op not_ : Expr -> Expr [ditto] .
     op _and_ : Expr Expr -> Expr [ditto] .
@@ -58,6 +58,7 @@ fmod EVAL is
     eq eval(M, B) = B .
     eq eval(M, V) = M[V] .
     eq eval(M, E1 + E2) = eval(M, E1) + eval(M, E2) .
+    eq eval(M, E1 - E2) = eval(M, E1) - eval(M, E2) .
     eq eval(M, E1 * E2) = eval(M, E1) * eval(M, E2) .
     eq eval(M, not(E1)) = not(eval(M, E1)) .
     eq eval(M, E1 and E2) = eval(M, E1) and eval(M, E2) .
@@ -71,12 +72,12 @@ fmod GCL-STATEMENTS is
 
     sorts Program GuardStm Statement .
 
-    --- op {_|_} : Substitution GuardStm -> Program .
-    op _|>_ : Expr Statement -> GuardStm .
-    op _<|_|>_ : Statement Expr Statement -> GuardStm .
-    op _;_ : GuardStm GuardStm -> GuardStm [assoc prec 100] .
+    op _|>_ : Expr Statement -> GuardStm [prec 95] .
+    op _<|_|>_ : Statement Expr Statement -> GuardStm [prec 95] .
+    op _;_ : GuardStm GuardStm -> GuardStm [assoc prec 100 id: idle] .
     op skip : -> GuardStm .
-    op _:=_ : Var Expr -> Statement .
+    op idle : -> GuardStm .
+    op _:=_ : Var Expr -> Statement [prec 90] .
     op spawn : GuardStm -> Statement .
 endfm
 
@@ -103,7 +104,6 @@ fmod RUNTIME-SYNTAX is
     sorts Processes RuntimeState .
     subsort Set{Process} < Processes .
     op {_|_} : Substitution Processes -> RuntimeState .
-    --- op {_|_|_} : Substitution Processes Process -> RuntimeState .
     op {step |_|_} : Substitution Processes -> RuntimeState .
     op {done |_|_} : Substitution Processes -> RuntimeState .
 endfm

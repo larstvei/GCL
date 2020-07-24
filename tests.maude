@@ -1,0 +1,32 @@
+load gcl.maude
+set print with parentheses off .
+
+red eval(empty, 2 + 3) .
+red eval('x |-> 3, 'x + 3) .
+
+--- Example 1 from paper
+rew
+{'x |-> 1, 'y |-> 2 |
+iota< counter >
+(true |> spawn(true |> 'x := 'x + 1) ;
+ true |> spawn(true |> 'y := 3)) } .
+
+--- Example 2 from paper
+rew
+{'x |-> 1 |
+iota< counter >
+(true |> spawn(true |> 'x := 'x + 1) ;
+ true |> spawn(true |> 'x := 3)) } .
+
+rew { empty | iota< counter > ('x := 3 <| true |> spawn(skip) ; g) } .
+rew { empty | iota< counter > ('x := 3 <| false |> spawn(skip) ; g) } .
+
+rew { ('x |-> 0, 'y |-> 0, 'flag |-> true) |
+iota< counter >
+(true |> spawn(('x == 0 or 'flag) |> 'x := 2 * 'x) ;
+ true |> spawn(('x := 'x + 2 <| 'flag |> 'x := 'x - 1 ; true |> 'flag := (not 'flag) ;
+               'x := 'x + 2 <| 'flag |> 'x := 'x - 1 ; true |> 'flag := (not 'flag) ;
+               'x := 'x + 2 <| 'flag |> 'x := 'x - 1 ; true |> 'flag := (not 'flag) ;
+               'x := 'x + 2 <| 'flag |> 'x := 'x - 1 ; true |> 'flag := (not 'flag) ;
+               'x := 'x + 2 <| 'flag |> 'x := 'x - 1 ; true |> 'flag := (not 'flag) ;
+               true |> 'y := 'y + 1))) } .
