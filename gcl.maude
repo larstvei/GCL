@@ -70,7 +70,7 @@ endfm
 fmod GCL-STATEMENTS is
     pr EXPR .
 
-    sorts Program GuardStm Statement .
+    sorts GuardStm Statement .
 
     op _|>_ : Expr Statement -> GuardStm [prec 95] .
     op _<|_|>_ : Statement Expr Statement -> GuardStm [prec 95] .
@@ -90,7 +90,7 @@ fmod PROCESS is
     subsorts List{Nat} < ThreadId .
 
     op iota<_>(_) : ThreadId GuardStm -> Process .
-    op iota<_,_>(_) : ThreadId Nat GuardStm -> Process [format (n d d d d n d d d)] .
+    op iota<_,_>(_) : ThreadId Nat GuardStm -> Process [format (ni d d d d ni d d d)] .
     var I : ThreadId .
     var g : GuardStm .
     eq iota< I > (g) = iota< I, 0 > (g) .
@@ -164,4 +164,125 @@ mod GCL-SEMANTICS is
         { Sigma' | P, P' }
       if { step | Sigma | iota< I, N > (g) }
         => { done | Sigma' | P' } .
+endm
+
+fmod LABEL is
+    pr PROCESS .
+    sort Label .
+
+    op epsilon : -> Label .
+    op _[_ |> _ := _] : ThreadId Expr Var Expr -> Label .
+    op _[_ |> spawn(_)] : ThreadId Expr ThreadId -> Label .
+endfm
+
+fmod LABELED-RUNTIME-SYNTAX is
+    pr LABEL .
+    pr RUNTIME-SYNTAX .
+
+    sort Trace .
+    subsort Label < Trace .
+
+    op _._ : Trace Trace -> Trace [assoc id: epsilon
+          format (d d ni d)] .
+
+    op {_|_|_} : Trace Substitution Processes -> RuntimeState
+        [format (n+ ni ni d ni d n- d)].
+    op {step |_|_} : Substitution Processes -> RuntimeState .
+    op {done |_|_|_} : Label Substitution Processes -> RuntimeState .
+endfm
+
+
+mod GCL-CONCOLIC-SEMANTICS is
+    pr EVAL .
+    pr LABELED-RUNTIME-SYNTAX .
+    pr GCL-STATEMENTS .
+
+    vars Sigma Sigma' : Substitution .
+    vars g g' : GuardStm .
+    vars s1 s2 : Statement .
+    vars e e' : Expr .
+    var I : ThreadId .
+    var N : Nat .
+    var x : Var .
+    vars P P' : Processes .
+    vars tau : Trace .
+    vars l : Label .
+
+    rl [Skip] :
+        { step
+          | Sigma
+          | iota< I, N > (skip ; g) }
+      =>
+        { done
+          | epsilon
+          | Sigma
+          | iota< I, N > (g) } .
+
+    crl [Assignment] :
+        { step
+          | Sigma
+          | iota< I, N > (e |> x := e' ; g) }
+      =>
+        { done
+          | I[e |> x := e']
+          | Sigma'
+          | iota< I, N > (g) }
+      if eval(Sigma, e) == true /\
+          Sigma' := insert(x, eval(Sigma, e'), Sigma) .
+
+    crl [Spawn] :
+        { step
+          | Sigma
+          | iota< I, N > (e |> spawn(g') ; g) }
+      =>
+        { done
+          | I[e |> spawn(I N)]
+          | Sigma
+          | iota< I, s(N) > (g), iota< I N > (g') }
+      if eval(Sigma, e) == true .
+
+    crl [Choice1] :
+        { step
+          | Sigma
+          | iota< I, N > (s1 <| e |> s2 ; g) }
+      =>
+        { done
+          | l
+          | Sigma'
+          | P }
+      if { step
+            | Sigma
+            | iota< I, N > (e |> s1 ; g) }
+        => { done
+            | l
+            | Sigma'
+            | P } .
+
+    crl [Choice2] :
+        { step
+          | Sigma
+          | iota< I, N > (s1 <| e |> s2 ; g) }
+      =>
+        { done
+          | l
+          | Sigma'
+          | P }
+      if { step | Sigma | iota< I, N > ((not e) |> s2 ; g) }
+        => { done | l | Sigma' | P } .
+
+    crl [Interleaving] :
+        { tau
+          | Sigma
+          | P, iota< I, N > (g) }
+      =>
+        { tau . l
+          | Sigma'
+          | P, P' }
+      if { step
+            | Sigma
+            | iota< I, N > (g) }
+        => { done
+            | l
+            | Sigma'
+            | P' } .
 endm

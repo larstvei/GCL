@@ -5,25 +5,40 @@ red eval(empty, 2 + 3) .
 red eval('x |-> 3, 'x + 3) .
 
 --- Example 1 from paper
-rew
+rew in GCL-SEMANTICS :
 {'x |-> 1, 'y |-> 2 |
 iota< 0 >
 (true |> spawn(true |> 'x := 'x + 1) ;
  true |> spawn(true |> 'y := 3)) } .
 
 --- Example 2 from paper
-rew
+rew in GCL-SEMANTICS :
 {'x |-> 1 |
 iota< 0 >
 (true |> spawn(true |> 'x := 'x + 1) ;
  true |> spawn(true |> 'x := 3)) } .
 
 --- Example 3 from paper
-rew { empty | iota< 0 > ('x := 3 <| true |> spawn(skip) ; g) } .
-rew { empty | iota< 0 > ('x := 3 <| false |> spawn(skip) ; g) } .
+rew in GCL-SEMANTICS :
+{ empty | iota< 0 > ('x := 3 <| true |> spawn(skip) ; g) } .
+rew in GCL-SEMANTICS :
+{ empty | iota< 0 > ('x := 3 <| false |> spawn(skip) ; g) } .
 
-rew { ('x |-> 0, 'y |-> 0, 'flag |-> true) |
-iota< 0 >
+rew in GCL-SEMANTICS :
+{ ('x |-> 0, 'y |-> 0, 'flag |-> true)
+| iota< 0 >
+(true |> spawn(('x == 0 or 'flag) |> 'x := 2 * 'x) ;
+ true |> spawn(('x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;
+               'x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;
+               'x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;
+               'x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;
+               'x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;
+               true |> 'y := 'y + 1))) } .
+
+rew in GCL-CONCOLIC-SEMANTICS :
+{ epsilon
+| ('x |-> 0, 'y |-> 0, 'flag |-> true)
+| iota< 0 >
 (true |> spawn(('x == 0 or 'flag) |> 'x := 2 * 'x) ;
  true |> spawn(('x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;
                'x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;

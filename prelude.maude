@@ -1432,7 +1432,7 @@ fmod MAP{X :: TRIV, Y :: TRIV} is
     op _|->_ : X$Elt Y$Elt -> Entry{X,Y} [ctor] .
     op empty : -> Map{X,Y} [ctor] .
     op _,_ : Map{X,Y} Map{X,Y} -> Map{X,Y}
-        [ctor assoc comm id: empty prec 121 format (r d nss o)] .
+        [ctor assoc comm id: empty prec 121 format (r d niss o)] .
     op undefined : -> [Y$Elt] [ctor] .
 
     var D : X$Elt .
