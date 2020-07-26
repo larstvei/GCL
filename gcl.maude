@@ -74,22 +74,26 @@ fmod GCL-STATEMENTS is
 
     op _|>_ : Expr Statement -> GuardStm [prec 95] .
     op _<|_|>_ : Statement Expr Statement -> GuardStm [prec 95] .
-    op _;_ : GuardStm GuardStm -> GuardStm [assoc prec 100 id: idle] .
+    op _;_ : GuardStm GuardStm -> GuardStm [assoc prec 100 id: idle format (d d ni d)] .
     op skip : -> GuardStm .
     op idle : -> GuardStm .
     op _:=_ : Var Expr -> Statement [prec 90] .
-    op spawn : GuardStm -> Statement .
+    op spawn_ : GuardStm -> Statement .
 endfm
 
 fmod PROCESS is
     pr NAT .
+    pr LIST{Nat} .
     pr GCL-STATEMENTS .
 
     sorts Process ThreadId .
-    subsorts Nat < ThreadId .
+    subsorts List{Nat} < ThreadId .
 
-    --- Allow equivalent kinds for ThreadId. Necessary for counter.
-    op iota<_>(_) : [ThreadId] GuardStm -> Process .
+    op iota<_>(_) : ThreadId GuardStm -> Process .
+    op iota<_,_>(_) : ThreadId Nat GuardStm -> Process [format (n d d d d n d d d)] .
+    var I : ThreadId .
+    var g : GuardStm .
+    eq iota< I > (g) = iota< I, 0 > (g) .
 endfm
 
 view Process from TRIV to PROCESS is
@@ -109,7 +113,6 @@ fmod RUNTIME-SYNTAX is
 endfm
 
 mod GCL-SEMANTICS is
-    pr COUNTER .
     pr EVAL .
     pr RUNTIME-SYNTAX .
     pr GCL-STATEMENTS .
@@ -119,45 +122,46 @@ mod GCL-SEMANTICS is
     vars s1 s2 : Statement .
     vars e e' : Expr .
     var I : ThreadId .
+    var N : Nat .
     var x : Var .
     vars P P' : Processes .
 
     rl [Skip] :
-        { step | Sigma | iota< I > (skip ; g) }
+        { step | Sigma | iota< I, N > (skip ; g) }
       =>
-        { done | Sigma | iota< I > (g) } .
+        { done | Sigma | iota< I, N > (g) } .
 
     crl [Assignment] :
-        { step | Sigma | iota< I > (e |> x := e' ; g) }
+        { step | Sigma | iota< I, N > (e |> x := e' ; g) }
       =>
-        { done | Sigma' | iota< I > (g) }
+        { done | Sigma' | iota< I, N > (g) }
       if eval(Sigma, e) == true /\
           Sigma' := insert(x, eval(Sigma, e'), Sigma) .
 
     crl [Spawn] :
-        { step | Sigma | iota< I > (e |> spawn(g') ; g) }
+        { step | Sigma | iota< I, N > (e |> spawn(g') ; g) }
       =>
-        { done | Sigma | iota< I > (g), iota< counter > (g') }
+        { done | Sigma | iota< I, s(N) > (g), iota< I N > (g') }
       if eval(Sigma, e) == true .
 
     crl [Choice1] :
-        { step | Sigma | iota< I > (s1 <| e |> s2 ; g) }
+        { step | Sigma | iota< I, N > (s1 <| e |> s2 ; g) }
       =>
         { done | Sigma' | P }
-      if { step | Sigma | iota< I > (e |> s1 ; g) }
+      if { step | Sigma | iota< I, N > (e |> s1 ; g) }
         => { done | Sigma' | P } .
 
     crl [Choice2] :
-        { step | Sigma | iota< I > (s1 <| e |> s2 ; g) }
+        { step | Sigma | iota< I, N > (s1 <| e |> s2 ; g) }
       =>
         { done | Sigma' | P }
-      if { step | Sigma | iota< I > ((not e) |> s2 ; g) }
+      if { step | Sigma | iota< I, N > ((not e) |> s2 ; g) }
         => { done | Sigma' | P } .
 
     crl [Interleaving] :
-        { Sigma | P, iota< I > (g) }
+        { Sigma | P, iota< I, N > (g) }
       =>
         { Sigma' | P, P' }
-      if { step | Sigma | iota< I > (g) }
+      if { step | Sigma | iota< I, N > (g) }
         => { done | Sigma' | P' } .
 endm
