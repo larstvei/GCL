@@ -27,7 +27,7 @@ rew in GCL-SEMANTICS :
 rew in GCL-SEMANTICS :
 { ('x |-> 0, 'y |-> 0, 'flag |-> true)
 | iota< 0 >
-(true |> spawn(('x == 0 or 'flag) |> 'x := 2 * 'x) ;
+(true |> spawn(('x =:= 0 or 'flag) |> 'x := 2 * 'x) ;
  true |> spawn(('x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;
                'x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;
                'x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;
@@ -39,7 +39,7 @@ rew in GCL-CONCOLIC-SEMANTICS :
 { epsilon
 | ('x |-> 0, 'y |-> 0, 'flag |-> true)
 | iota< 0 >
-(true |> spawn(('x == 0 or 'flag) |> 'x := 2 * 'x) ;
+(true |> spawn(('x =:= 0 or 'flag) |> 'x := 2 * 'x) ;
  true |> spawn(('x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;
                'x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;
                'x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;
