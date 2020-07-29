@@ -1,8 +1,8 @@
 load gcl.maude
 set print with parentheses off .
 
-red eval(empty, 2 + 3) .
-red eval('x |-> 3, 'x + 3) .
+red in EVAL : eval(empty, 2 + 3) .
+red in EVAL : eval('x |-> 3, 'x + 3) .
 
 --- Example 1 from paper
 rew in GCL-SEMANTICS :
@@ -41,7 +41,6 @@ rew in GCL-CONCOLIC-SEMANTICS :
 | iota< 0 >
 (true |> spawn(('x =:= 0 or 'flag) |> 'x := 2 * 'x) ;
  true |> spawn(('x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;
-               'x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;
                'x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;
                'x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;
                'x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;
