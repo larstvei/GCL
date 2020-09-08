@@ -13,6 +13,7 @@ view Var from TRIV to VAR is
 endv
 
 fmod EXPR is
+    pr SET{Var} * (sort Set{Var} to VarSet) .
     pr VAR .
     pr INT .
     pr BOOL .
@@ -27,6 +28,23 @@ fmod EXPR is
     op _or_ : Expr Expr -> Expr [ditto] .
     op _=:=_ : Expr Expr -> Bool [prec 25] .
     op _<_ : Expr Expr -> Expr [ditto] .
+
+    var N : Int .
+    var B : Bool .
+    var V : Var .
+    vars E1 E2 : Expr .
+
+    op vars : Expr -> VarSet .
+    eq vars(N) = empty .
+    eq vars(B) = empty .
+    eq vars(V) = V .
+    eq vars(E1 + E2) = union(vars(E1), vars(E2)) .
+    eq vars(E1 * E2) = union(vars(E1), vars(E2)) .
+    eq vars(not(E1)) = vars(E1) .
+    eq vars(E1 and E2) = union(vars(E1), vars(E2)) .
+    eq vars(E1 or E2) = union(vars(E1), vars(E2)) .
+    eq vars(E1 < E2) = union(vars(E1), vars(E2)) .
+    eq vars(E1 =:= E2) = union(vars(E1), vars(E2)) .
 endfm
 
 view Expr from TRIV to EXPR is
@@ -64,7 +82,6 @@ fmod EVAL is
     eq eval(M, E1 =:= E1) = true .
     eq eval(M, E1 < E2) = eval(M, E1) < eval(M, E2) .
     eq eval(M, E1 =:= E2) = eval(M, E1) =:= eval(M, E2) [owise].
-
 endfm
 
 fmod GCL-STATEMENTS is
@@ -83,17 +100,25 @@ endfm
 
 fmod PROCESS is
     pr NAT .
+    pr BOOL .
     pr LIST{Nat} .
     pr GCL-STATEMENTS .
 
     sorts Process ThreadId .
     subsorts List{Nat} < ThreadId .
 
-    op iota<_>(_) : ThreadId GuardStm -> Process .
     op iota<_,_>(_) : ThreadId Nat GuardStm -> Process [format (ni d d d d ni d d d)] .
     var I : ThreadId .
     var g : GuardStm .
-    eq iota< I > (g) = iota< I, 0 > (g) .
+
+    var N M : Nat .
+    var L L' : ThreadId .
+
+    op _lt_ : ThreadId ThreadId -> Bool .
+    eq nil lt nil = false .
+    eq N L lt nil = false .
+    eq nil lt M L' = true .
+    eq N L lt M L' = N < M or (N == M and L lt L') .
 endfm
 
 view Process from TRIV to PROCESS is
@@ -141,7 +166,7 @@ mod GCL-SEMANTICS is
     crl [Spawn] :
         { step | Sigma | iota< I, N > (e |> spawn(g') ; g) }
       =>
-        { done | Sigma | iota< I, s(N) > (g), iota< I N > (g') }
+        { done | Sigma | iota< I, s(N) > (g), iota< I N, 0 > (g') }
       if eval(Sigma, e) == true .
 
     crl [Choice1] :
@@ -167,10 +192,11 @@ mod GCL-SEMANTICS is
 endm
 
 fmod TRACE is
+    pr BOOL .
     pr PROCESS .
     sort Label .
 
-    op epsilon : -> Label .
+    op epsilon : -> Trace .
     op _[_ |> _ := _] : ThreadId Expr Var Expr -> Label .
     op _[_ |> spawn(_)] : ThreadId Expr ThreadId -> Label .
 
@@ -178,6 +204,64 @@ fmod TRACE is
     subsort Label < Trace .
 
     op _++_ : Trace Trace -> Trace [assoc id: epsilon format (d d ni d)] .
+
+    vars I1 I2 I' I'' : ThreadId .
+    vars e0 e1 e2 e3 : Expr .
+    vars x0 x1 : Var .
+    vars l l1 l2 : Label .
+    vars theta : Trace .
+
+
+    op read : Label -> VarSet .
+    eq read(I1[e0 |> x0 := e1]) = union(vars(e0), vars(e1)) .
+    eq read(I1[e0 |> spawn(I')]) = vars(e0) .
+    
+    op write : Label -> VarSet .
+    eq write(I1[e0 |> x0 := e1]) = x0 .
+    eq write(I1[e0 |> spawn(I')]) = empty .
+
+    op _~_ : Label Label -> Bool .
+    ceq I1[e0 |> x0 := e1] ~ I2[e2 |> x1 := e3] =
+        intersection(write(l1), union(read(l2), write(l2))) == empty
+        and intersection(write(l2), union(read(l1), write(l1))) == empty
+        and I1 =/= I2
+      if l1 := I1[e0 |> x0 := e1] /\
+          l2 := I2[e2 |> x1 := e3] .
+
+    ceq I1[e0 |> spawn(I')] ~ I2[e2 |> x1 := e3] =
+        intersection(write(l1), union(read(l2), write(l2))) == empty
+        and intersection(write(l2), union(read(l1), write(l1))) == empty
+        and I1 =/= I2 and I' =/= I2
+      if l1 := I1[e0 |> spawn(I')] /\
+          l2 := I2[e2 |> x1 := e3] .
+
+    ceq I1[e0 |> x0 := e1] ~ I2[e2 |> spawn(I'')] =
+        intersection(write(l1), union(read(l2), write(l2))) == empty
+        and intersection(write(l2), union(read(l1), write(l1))) == empty
+        and I1 =/= I2 and I'' =/= I1
+      if l1 := I1[e0 |> x0 := e1] /\
+          l2 := I2[e2 |> spawn(I'')] .
+
+    ceq I1[e0 |> spawn(I')] ~ I2[e2 |> spawn(I'')] =
+        intersection(write(l1), union(read(l2), write(l2))) == empty
+        and intersection(write(l2), union(read(l1), write(l1))) == empty
+        and I1 =/= I2 and I'' =/= I1 and I' =/= I2
+      if l1 := I1[e0 |> spawn(I')] /\
+          l2 := I2[e2 |> spawn(I'')] .
+
+    op _<_ : Label Label -> Bool .
+    eq I1[e0 |> x0 := e1] < I2[e2 |> x1 := e3] = I1 lt I2 .
+    eq I1[e0 |> spawn(I')] < I2[e2 |> x1 := e3] = I1 lt I2 .
+    eq I1[e0 |> x0 := e1] < I2[e2 |> spawn(I'')] = I1 lt I2 .
+    eq I1[e0 |> spawn(I')] < I2[e2 |> spawn(I'')] = I1 lt I2 .
+
+    op canon : Trace -> Trace .
+    eq canon(epsilon) = epsilon .
+    eq canon(epsilon ++ l) = epsilon ++ l .
+    ceq canon(theta ++ l1 ++ l2 ) = canon(theta ++ l1 ) ++ l2
+      if not(l1 ~ l2) or l1 < l2 .
+    ceq canon(theta ++ l1 ++ l2 ) = canon(canon(theta ++ l2 ) ++ l1 )
+      if l1 ~ l2 /\ l2 < l1 .
 endfm
 
 fmod LABELED-RUNTIME-SYNTAX is
@@ -237,7 +321,7 @@ mod GCL-CONCOLIC-SEMANTICS is
         { done
           | I[e |> spawn(I N)]
           | Sigma
-          | iota< I, s(N) > (g), iota< I N > (g') }
+          | iota< I, s(N) > (g), iota< I N, 0 > (g') }
       if eval(Sigma, e) == true .
 
     crl [Choice1] :
