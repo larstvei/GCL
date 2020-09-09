@@ -59,23 +59,6 @@ def local_traces(trace):
         res[iota].append((iota, guard, exp))
     return res
 
-test_program_1 = """
-{ epsilon
-| ('x |-> 0, 'y |-> 0, 'flag |-> true)
-| iota< 0, 0 >
-(true |> spawn(('x =:= 0 or 'flag) |> 'x := 2 * 'x) ;
- true |> spawn(('x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;
-               'x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;
-               'x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;
-               'x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;
-               true |> 'y := 'y + 1))) }
-"""
-
-theta0 = run_gcl(test_program_1)
-sigma0 = test_program_1.split('| ')[1]
-
-# do maude interaction to get a recorded trace
-
 def nextevent(iota, theta, lt):
     lt1 = lt[iota]
     lt2 = local_traces(theta)[iota]
@@ -110,3 +93,24 @@ def pretty_print_res(I):
     for theta in I:
         print(' ++\n'.join([event2maudestr(e) for e in theta]))
         print()
+
+# do maude interaction to get a recorded trace
+test_program_1 = """
+{ epsilon
+| ('x |-> 0, 'y |-> 0, 'flag |-> true)
+| iota< 0, 0 >
+(true |> spawn(('x =:= 0 or 'flag) |> 'x := 2 * 'x) ;
+ true |> spawn(('x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;
+               'x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;
+               'x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;
+               'x := 'x + 2 <| 'flag |> 'x := 'x + -1 ; true |> 'flag := (not 'flag) ;
+               true |> 'y := 'y + 1))) }
+"""
+
+if __name__ == '__main__':
+    print(test_program_1)
+
+    theta0 = run_gcl(test_program_1)
+    sigma0 = test_program_1.split('| ')[1]
+
+    pretty_print_res(search(theta0, sigma0))
