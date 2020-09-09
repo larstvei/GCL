@@ -17,16 +17,26 @@ def event2maudestr(event):
     iota, guard, exp = event
     return '(' + iota + '[' + guard + ' |> ' + exp + '])'
 
+def trace2maudestr(trace):
+    return '++'.join([event2maudestr(event) for event in trace])
+
 def run_gcl(exp):
     maude_process = start_maude()
     cmd = ('rew in GCL-CONCOLIC-SEMANTICS : ' + exp + ' .\n')
     result = maude_process.communicate(input=cmd.encode())[0].decode()
-    print(result)
     runtime_state = result.split("result RuntimeState:")[-1]
     almost_trace = runtime_state.split("| ")[0]
     almost_trace = almost_trace.split("{")[-1]
     trace = [maudestr2event(event_str) for event_str in almost_trace.split("++")]
     return trace
+
+def run_canon(trace):
+    maude_process = start_maude()
+    cmd = ('rew in TRACE : canon(' + trace2maudestr(trace) + ') .\n')
+    result = maude_process.communicate(input=cmd.encode())[0].decode()
+    raw = result.split("result Trace:")[-1]
+    almost_trace = raw.split("Maude>")[0]
+    return [maudestr2event(event_str) for event_str in almost_trace.split("++")]
 
 def local_traces(trace):
     res = defaultdict(list)
